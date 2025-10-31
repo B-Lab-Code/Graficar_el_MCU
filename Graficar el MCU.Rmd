@@ -1,0 +1,515 @@
+# Ganancias y critica en el MCU
+### Bernardino Araya
+
+
+
+
+El Marvel Cinematic Universe (MCU) se ha construido como un universo exitoso en la pantalla grande. Con millones de fans, gran recaudación y un impacto cultural gigante, este ha marcado un antes y después en el cine de superhéroes.
+
+Sin embargo ¿ha seguido siendo tan exitoso?
+
+En este blog explicaré como hacer una grafica en que se pueda ver la evolución de su exito, midiendo la critica, así como contrastandola con el presupuesto y las ganancias obtenidas.
+
+Lo que haremos será una grafica de doble eje Y en una linea de tiempo. En ella sumaremos el total de las ganancias generadas por las obras y si hay alguna relación con los promedios de la critica.
+
+
+## Paso 1: Las herramientas a usar
+
+Primero, como necesito información como el presupuesto, ganancias y opinion de la critica, usé la base de datos **Marvel Movie dataset** del usuario noman_bhimani en Kaggle. Lo pueden encontrar en https://www.kaggle.com/datasets/nomanbhimani/marvel-movies-and-tv-show-dataset-2024?resource=download.
+
+Primero, usaremos los siguientes paquetes de R:
+
+```{r}
+library(tidyverse)
+library(dplyr)
+library(readr)
+library(lubridate)
+library(ggplot2)
+```
+
+```{r, include=FALSE}
+library(tidyverse)
+library(dplyr)
+library(readr)
+library(lubridate)
+library(ggplot2)
+```
+
+Los paquetes como *tidyverse*, *dplyr* y *readr* serán utiles para la limpieza de datos, mientras que *lubridate* y *ggplot2* serán usados para contruir el grafico posteriormente.
+
+Primero, leeremos el archivo y le asignaremos a la base de datos el nombre **df**:
+
+
+```{r}
+df <- read.csv("C:/Users/berna/OneDrive/Escritorio/R_proyectos/Ramo MADD/Tarea 1 individual/MCU/marvel_movies_complete_dataset.csv")
+```
+
+
+## Paso 2: Ordenar y limpiar los datos
+
+Podemos ver que la tabla tiene 70 filas u observaciones y 12 columnas o variables. Para simplificar la limpieza de datos, cambiaremos los nombres con identificaremos los nombres con la función **colnames**. Con esta función identificaremos el nombre de las variables y...
+
+```{r, include=FALSE}
+colnames(df)
+```
+
+```{r}
+colnames(df)
+```
+
+...tambien podemos usarla para cambiar estos mismos nombres:
+
+```{r, include=FALSE}
+colnames(df) <- c("title", "lanzamiento", "box_office_millones",
+                  "budget_millones", "streaming_revenue_millones", "hours_watched_millones",
+                  "imdb", "metacritic_critics", "metacritic_audience",
+                  "letterboxd_critics", "letterboxd_audience", "awards_won_nominated")
+```
+
+```{r}
+colnames(df) <- c("title", "lanzamiento", "box_office_millones",
+                  "budget_millones", "streaming_revenue_millones", "hours_watched_millones",
+                  "imdb", "metacritic_critics", "metacritic_audience",
+                  "letterboxd_critics", "letterboxd_audience", "awards_won_nominated")
+```
+
+Una vez simplificamos los nombres de las variables, podemos empezar a crear una nueva base de datos.
+
+Usaremos **df** como base central de este trabajo, en base a este crearemos **df_1**. Aquí seleccionaremos las variables que servirán para contruir nuestra base. Las variables de dinero irán en el eje Y1, la de tiempo en el eje X y las de critica en el eje Y2.
+
+```{r, include=FALSE}
+df_1 <- df |>
+  select(title, lanzamiento, budget_millones, 
+         box_office_millones, streaming_revenue_millones, imdb, 
+         metacritic_critics, metacritic_audience, letterboxd_critics, 
+         letterboxd_audience) |>
+  arrange(lanzamiento) |>
+  slice(-(1:14))
+```
+
+```{r}
+df_1 <- df |>
+  select(title, lanzamiento, budget_millones, 
+         box_office_millones, streaming_revenue_millones, imdb, 
+         metacritic_critics, metacritic_audience, letterboxd_critics, 
+         letterboxd_audience) |>
+  arrange(lanzamiento) |>
+  slice(-(1:14))
+```
+
+En el mismo chunk, usaremos la función **arrange** sobre la variable *lanzamiento*. **arrange** sirve para ordenar una variable numerica por el valor (de forma ascendente y descendente). Como la variable *lanzamiento* tiene los años de lanzamiento de cada obra, y aparte, se considera que el nacimiento del MCU fue con Iron Man (2008). Así que, todas las obras que hayan aparecido antes (osea, hasta la fila 14), vas a usar la función slice que, con el signo menos (-) elimina esas filas como si usase el guante de Thanos.
+
+Teniendo a Iron Man como punto de partida y la base **df_1** ordenada, crearemos una nueva base de datos llamada **df_2**. Haremos lo siguiente:
+
+Como en el eje Y1 vamos a calcular las ganancias de cada pelicula, sumaremos las variables *box_office_millones* ganancias de boleteria (*box_office_millones*) más ganancias de streaming (*streaming_revenue_millones*), lo que nos dará como resultado las ganancias en millones, a la que les asignaremos el nombre *total_revenue_millones*.
+
+Pero, como todo en esta vida cuesta, debemos descontarle el *budget* o costo de producción, de modo que nos de las utilidades totales, a las que llamaremos *ganancias_millones*.
+
+```{r, include=FALSE}
+df_2 <- df_1 |>
+  mutate(
+    total_revenue_millones = box_office_millones + streaming_revenue_millones
+  ) |>
+  mutate(
+    ganancias_millones = total_revenue_millones - budget_millones
+  ) |>
+  select(title, lanzamiento, budget_millones, 
+         box_office_millones, streaming_revenue_millones, total_revenue_millones, 
+         ganancias_millones, imdb, metacritic_critics, 
+         metacritic_audience, letterboxd_critics, letterboxd_audience)
+```
+
+```{r}
+df_2 <- df_1 |>
+  mutate(
+    total_revenue_millones = box_office_millones + streaming_revenue_millones
+  ) |>
+  mutate(
+    ganancias_millones = total_revenue_millones - budget_millones
+  ) |>
+  select(title, lanzamiento, budget_millones, 
+         box_office_millones, streaming_revenue_millones, total_revenue_millones, 
+         ganancias_millones, imdb, metacritic_critics, 
+         metacritic_audience, letterboxd_critics, letterboxd_audience)
+```
+
+Luego de esos calculos, seleccionaremos las variables que usaremos, entre las que incluiremos las variables recien creadas.
+
+Con todo eso, podemos empezar a crear la grafica.
+
+
+## Paso 3: Medidas de la grafica
+
+Usando **df_2** crearemos la grafica **df_graf_meta_c**. Como nuestro objetivo es calcular el total recaudado en cada año y el promedio de las criticas, agruparemos los años (*lanzamiento*) con **group_by** y , utilizando **summarise**, con la función **sum** sumaremos las utilidades (*ganancias_totales*) de todas las obras en cada año, creando la variable *ganancias_totales*. Además, para esta grafica, usaremos los puntajes que los criticos de Metacritic (no la audiencia) le entregan a las obras, por lo que promediaremos los puntajes de la variable *metacritic_critics* cada año. En cualquier caso, sientete libre de usar otros puntajes de critica si te parece.
+
+```{r, include=FALSE}
+df_graf_meta_c <- df_2 |>
+  group_by(lanzamiento) |>
+  summarise(
+    ganancias_totales = sum(ganancias_millones, na.rm = TRUE),
+    promedio_metacritic_critics = mean(metacritic_critics, na.rm = TRUE)
+  ) |>
+  arrange(lanzamiento)
+```
+
+```{r}
+df_graf_meta_c <- df_2 |>
+  group_by(lanzamiento) |>
+  summarise(
+    ganancias_totales = sum(ganancias_millones, na.rm = TRUE),
+    promedio_metacritic_critics = mean(metacritic_critics, na.rm = TRUE)
+  ) |>
+  arrange(lanzamiento)
+```
+
+Una vez con todo, cerramos el chunk ordenando las filas por año con **arrange**.
+
+Ahora, como los valores de las ganancias y puntos son distintos, hay que hacer que tengan cierta equivalencia. Para eso crearemos los iguientes vectores: 
+
+```{r, include=FALSE}
+max_ganancias <- max(df_graf_meta_c$ganancias_totales, na.rm = TRUE)
+```
+
+```{r, include=FALSE}
+max_puntuacion <- 100
+```
+
+```{r, include=FALSE}
+factor_escala <- max_ganancias / max_puntuacion
+```
+
+```{r}
+max_ganancias <- max(df_graf_meta_c$ganancias_totales, na.rm = TRUE)
+```
+
+```{r}
+max_puntuacion <- 100
+```
+
+```{r}
+factor_escala <- max_ganancias / max_puntuacion
+```
+
+El vector **max_ganancias** es el puntaje maximo al que llegan las ganancias, **max_puntuacion** el maximo de puntuación en la escala de Metacritic y **factor_escala** el valor que permite a ambas variables ser proporcionales en la grafica.
+
+
+## Paso 4: A graficar
+
+Ahora, para la grafica buscamos lo siguiente:
+
+Eje Y1: las ganancias en millones de Marvel en cada año.
+
+Eje X: la linea de tiempo en años ordenados (desde 2008 a 2024).
+
+Eje Y2: el promedio de la critica a las obras en el año y puntos que muestren que puntaje recibío cada una.
+
+Tomando en cuenta lo anterior, así formularemos el grafico el codigo para el grafico.
+
+```{r, include=FALSE}
+ggplot(df_graf_meta_c, aes(x = lanzamiento)) + #Usamos df_graf_meta_c e igualamos X a la variable lanzamiento
+  geom_jitter(
+    data = df_2,  # Para hacer los puntos, utilizaremos la data que ya teniamos en df_2 y...
+    aes(y = metacritic_critics * factor_escala), # ...usandos los puntos de la critica al factor escala...
+    color = "#001b36",     # ...luego les asignaremos un color (que combina con el logo de Metacritic)...
+    alpha = 0.5,        # ... los hacemos los puntos semitransparentes...
+    width = 0.2         # ... y controlamos el "jiggle" horizontal
+  ) +
+  geom_line(
+    aes(y = ganancias_totales, color = "Ganancias (Millones)"), # El eje Y1 será el que mida las ganancias
+    size = 1.5 
+  ) +
+  
+  # Eje Y2: Línea de Puntuación 
+  geom_line(
+    aes(y = promedio_metacritic_critics * factor_escala, color = "Promedio Metacritic"), # Le asignamos nombre a este eje
+    size = 1.5,
+    linetype = "dashed" 
+  ) +
+  
+  # Acá la configuración del doble eje Y (sin cambios)
+  scale_y_continuous(
+    name = "Ganancias Totales (Millones $)",
+    sec.axis = sec_axis(
+      ~ . / factor_escala, 
+      name = "Puntuación Promedio Metacritic (0-100)"
+    )
+  ) +
+  
+  # Acá van los Títulos y Colores, por lo que no debemos modificarlos
+  scale_color_manual(
+    name = "Métricas", 
+    values = c(
+      "Ganancias (Millones)" = "green",
+      "Promedio Metacritic" = "#001b36"
+    )
+  ) +
+  
+  labs(
+    title = "Ganancias de Películas vs. Puntuación de la Crítica",
+    subtitle = "Datos anuales (2008-2024)",
+    x = "Año de Lanzamiento",
+    caption = "Los puntos azules representan películas individuales."
+  ) +
+  
+  theme_minimal() +
+  theme(
+    legend.position = "bottom",
+    axis.title.y.left = element_text(color = "green", face = "bold"),
+    axis.title.y.right = element_text(color = "#001b36", face = "bold")
+  )
+```
+
+```{r}
+ggplot(df_graf_meta_c, aes(x = lanzamiento)) +
+  geom_jitter(
+    data = df_2,  
+    aes(y = metacritic_critics * factor_escala), 
+    color = "#001b36",     
+    alpha = 0.5,        
+    width = 0.2         
+  ) +
+  geom_line(
+    aes(y = ganancias_totales, color = "Ganancias (Millones)"), 
+    size = 1.5 
+  ) +
+  geom_line(
+    aes(y = promedio_metacritic_critics * factor_escala, color = "Promedio Metacritic"), 
+    size = 1.5,
+    linetype = "dashed" 
+  ) +
+  scale_y_continuous(
+    name = "Ganancias Totales (Millones $)",
+    sec.axis = sec_axis(
+      ~ . / factor_escala, 
+      name = "Puntuación Promedio Metacritic (0-100)"
+    )
+  ) +
+  scale_color_manual(
+    name = "Métricas", 
+    values = c(
+      "Ganancias (Millones)" = "green",
+      "Promedio Metacritic" = "#001b36"
+    )
+  ) +
+  labs(
+    title = "Ganancias de Películas vs. Puntuación de la Crítica",
+    subtitle = "Datos anuales (2008-2024)",
+    x = "Año de Lanzamiento",
+    caption = "Los puntos azules representan películas individuales."
+  ) +
+  theme_minimal() +
+  theme(
+    legend.position = "bottom",
+    axis.title.y.left = element_text(color = "green", face = "bold"),
+    axis.title.y.right = element_text(color = "#001b36", face = "bold")
+  )
+```
+
+Y así obtenemos una grafica de doble eje Y que muestre las ganancias y puntajes obras audiovisuales de Marvel.
+
+
+
+## Bonus track: ¿Y que hay del Break-Even?
+
+Para que una pelicula sea exitosa, no basta con llene los corazones del publico, la aclame la critica y que supere el costo de producción o *budget*. Una vez terminada la producción de la pelicula, aparecen nuevos costos, como el marketing para promocionarla o la comisión que se llevan los cines por cada entrada vendida. Por lo que el *budget* no representa el costo real de la cinta, sino un costo fijo inicial. El marketing y comisión de los cines puede ser considerado un costo variable, hay veces que puede acrecentar los costos duplicando el budget original ¡e incluso cuatriplicarlo!. 
+
+En cualquier caso, para que una pelicula sea rentable debe superar la suma de los costos fijos (*budget*) y variables (publicidad y comisiones de cines), osea, el break-even. El break-even o "punto muerto" es el punto en que las ganancias igualan a los costos, osea que no hay perdida ni beneficio, solo cuando las ganancias lo superan generan rentabilidad. ¿Por que muchas peliculas con potencia para una secuela no continuan a pesar de haber superado los costos de producción? probablemente, la respuesta es que no superaron el break-even.
+
+Si bien, este costo puede variar entre cada filme, existe la "regla" de que una pelicula en Hollywood debe ganar 2.5 veces sus costos de producción para cubrir el total de sus costos. Así que haremos un grafico en que tomaremos esta regla y veremos si pueden cubrirlo.
+
+Haremos lo mismo que en el Paso 2, pero en vez de que las ganancias se calculen como *revenue* menos *budget*, acá restaremos al *revenue* 2.5 veces el *budget* original.
+
+```{r, include=FALSE}
+df_3_regla <- df_1 |>
+  mutate(
+    total_revenue_millones = box_office_millones + streaming_revenue_millones
+  ) |>
+  mutate(
+    ganancias_millones_regla = total_revenue_millones - (2.5 * budget_millones)
+  ) |>
+  select(title, lanzamiento, budget_millones,
+         box_office_millones, streaming_revenue_millones, total_revenue_millones,
+         ganancias_millones_regla, imdb, metacritic_critics,
+         metacritic_audience, letterboxd_critics, letterboxd_audience)
+```
+
+```{r}
+df_3_regla <- df_1 |>
+  mutate(
+    total_revenue_millones = box_office_millones + streaming_revenue_millones
+  ) |>
+  mutate(
+    ganancias_millones_regla = total_revenue_millones - (2.5 * budget_millones)
+  ) |>
+  select(title, lanzamiento, budget_millones,
+         box_office_millones, streaming_revenue_millones, total_revenue_millones,
+         ganancias_millones_regla, imdb, metacritic_critics,
+         metacritic_audience, letterboxd_critics, letterboxd_audience)
+```
+
+Seguiremos los mismos pasos que en el Paso 2, pero modificando algunos datos ahora que aplicamos la Regla de las 2.5 veces. Volveremos a hacerlo con la critica especializada de Metacritic.
+
+```{r, include=FALSE}
+df_graf_meta_c_regla <- df_3_regla |>
+  group_by(lanzamiento) |>
+  summarise(
+    ganancias_totales_regla = sum(ganancias_millones_regla, na.rm = TRUE),
+    promedio_metacritic_critics = mean(metacritic_critics, na.rm = TRUE)
+  ) |>
+  arrange(lanzamiento)
+```
+
+```{r}
+df_graf_meta_c_regla <- df_3_regla |>
+  group_by(lanzamiento) |>
+  summarise(
+    ganancias_totales_regla = sum(ganancias_millones_regla, na.rm = TRUE),
+    promedio_metacritic_critics = mean(metacritic_critics, na.rm = TRUE)
+  ) |>
+  arrange(lanzamiento)
+```
+
+Es necesario cambiarlos tambien para el factor escala, porque los valores de las ganancias han cambiado, generando un nuevo factor escala que se aplica a la regla:
+
+```{r, include=FALSE}
+max_ganancias_regla <- max(df_graf_meta_c_regla$ganancias_totales_regla, na.rm = TRUE)
+```
+
+```{r, include=FALSE}
+max_puntuacion <- 100
+```
+
+```{r, include=FALSE}
+factor_escala_regla <- max_ganancias_regla / max_puntuacion
+```
+
+```{r}
+max_ganancias_regla <- max(df_graf_meta_c_regla$ganancias_totales_regla, na.rm = TRUE)
+```
+
+```{r}
+max_puntuacion <- 100
+```
+
+```{r}
+factor_escala_regla <- max_ganancias_regla / max_puntuacion
+```
+
+La *max_puntuacion* se mantiene, pero los otros dos vectores cambian.
+
+Con lo anterior listo, debemos repetir lo que hicimos en el Paso 4, pero cambiando las variables que van a seguir la Regla de las 2.5 veces:
+
+```{r, include=FALSE}
+ggplot(df_graf_meta_c_regla, aes(x = lanzamiento)) +
+  geom_jitter(
+    data = df_3_regla,  
+    aes(y = metacritic_critics * factor_escala_regla),
+    color = "#001b36",     
+    alpha = 0.5,        
+    width = 0.2         
+  ) +
+  geom_line(
+    aes(y = ganancias_totales_regla, color = "Ganancias (Millones)"), 
+    size = 1.5 
+  ) +
+
+  geom_line(
+    aes(y = promedio_metacritic_critics * factor_escala_regla, color = "Promedio Metacritic"), 
+    size = 1.5,
+    linetype = "dashed" 
+  ) +
+  scale_y_continuous(
+    name = "Ganancias Totales (Millones $)",
+    sec.axis = sec_axis(
+      ~ . / factor_escala_regla, 
+      name = "Puntuación Promedio Metacritic (0-100)"
+    )
+  ) +
+  
+  scale_color_manual(
+    name = "Métricas", 
+    values = c(
+      "Ganancias (Millones)" = "green",
+      "Promedio Metacritic" = "#001b36"
+    )
+  ) +
+  
+  labs(
+    title = "Ganancias de Películas vs. Puntuación de la Crítica",
+    subtitle = "Datos anuales (2008-2024)",
+    x = "Año de Lanzamiento",
+    caption = "Los puntos azules representan películas individuales."
+  ) +
+  
+  theme_minimal() +
+  theme(
+    legend.position = "bottom",
+    axis.title.y.left = element_text(color = "green", face = "bold"),
+    axis.title.y.right = element_text(color = "#001b36", face = "bold")
+  )
+```
+
+```{r}
+ggplot(df_graf_meta_c_regla, aes(x = lanzamiento)) +
+  geom_jitter(
+    data = df_3_regla,  
+    aes(y = metacritic_critics * factor_escala_regla),
+    color = "#001b36",     
+    alpha = 0.5,        
+    width = 0.2         
+  ) +
+  geom_line(
+    aes(y = ganancias_totales_regla, color = "Ganancias (Millones)"), 
+    size = 1.5 
+  ) +
+
+  geom_line(
+    aes(y = promedio_metacritic_critics * factor_escala_regla, color = "Promedio Metacritic"), 
+    size = 1.5,
+    linetype = "dashed" 
+  ) +
+  scale_y_continuous(
+    name = "Ganancias Totales (Millones $)",
+    sec.axis = sec_axis(
+      ~ . / factor_escala_regla, 
+      name = "Puntuación Promedio Metacritic (0-100)"
+    )
+  ) +
+  
+  scale_color_manual(
+    name = "Métricas", 
+    values = c(
+      "Ganancias (Millones)" = "green",
+      "Promedio Metacritic" = "#001b36"
+    )
+  ) +
+  
+  labs(
+    title = "Ganancias de Películas vs. Puntuación de la Crítica",
+    subtitle = "Datos anuales (2008-2024)",
+    x = "Año de Lanzamiento",
+    caption = "Los puntos azules representan películas individuales."
+  ) +
+  
+  theme_minimal() +
+  theme(
+    legend.position = "bottom",
+    axis.title.y.left = element_text(color = "green", face = "bold"),
+    axis.title.y.right = element_text(color = "#001b36", face = "bold")
+  )
+```
+
+Como se puede ver, con la excepción de 2020, Marvel ha resultado ser rentable, aunque sus ganancias han vuelto a rondar los 2000 millones de USD y los promedios en critica parezcan en tener una leve caida.
+
+En cualquier caso, hay más factores que pueden tomarse en cuenta para revisar la data de Marvel. Si bien la Regla de las 2.5 veces es util para calcular la rentabilidad de una pelicula, tambien hay que tomar en cuenta que los ejecutivos y los estudios van a buscar cubrir y superar con creces la inversión inicial, por lo que a veces no bastará con cubrir 2.5 veces el costo de producción. 
+
+Tambien puede ser interesante saber que carazterizticas cuantitativas y cualitativas tienen las peliculas más rentables y aceptadas por la critica. Con eso, incluso, se puede llegar a predecir el futuro rumbo de la franquicia.
+
+En cualquier caso, los datos presentados acá pueden ser un punto de partida para comprender mejor 
+
+
+## Referencias:
+
+¿Qué es el break even o punto muerto y cómo se calcula? https://www.impulsa-empresa.es/diccionario/break-even/
+
+Why Does Hollywood Care About Box Office Opening Weekends? https://variety.com/2024/film/news/box-office-opening-weekend-why-does-it-matter-1236033313/
